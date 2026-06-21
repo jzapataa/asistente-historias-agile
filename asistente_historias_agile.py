@@ -1,6 +1,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 import streamlit as st
+import os
 
 # =========================
 # Configuración de página
@@ -51,6 +52,18 @@ with st.sidebar:
             "Estimación preliminar"
         ]
     )
+
+
+# ============================================================
+# API Key
+# ============================================================
+
+if "GOOGLE_API_KEY" in st.secrets:
+    os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+
+if "GOOGLE_API_KEY" not in os.environ:
+    st.error("No se ha encontrado GOOGLE_API_KEY. Configúrala en los secrets del despliegue.")
+    st.stop()
 
 # =========================
 # Modelo
