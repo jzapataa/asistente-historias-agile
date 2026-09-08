@@ -19,6 +19,7 @@ def apply_estimation_policy(draft: AnalysisDraft) -> AnalysisResult:
     - Missing estimate data cannot be promoted to a ready state.
     - Non-blocking assumptions or missing information downgrade READY to
       READY_WITH_RESERVATIONS.
+    - READY_WITH_RESERVATIONS cannot keep HIGH confidence.
     """
 
     data = draft.model_dump()
@@ -37,7 +38,11 @@ def apply_estimation_policy(draft: AnalysisDraft) -> AnalysisResult:
         draft.assumptions or draft.missing_information
     ):
         data["estimation_readiness"] = EstimationReadiness.READY_WITH_RESERVATIONS
-        if draft.confidence is Confidence.HIGH:
-            data["confidence"] = Confidence.MEDIUM
+
+    if (
+        data["estimation_readiness"] is EstimationReadiness.READY_WITH_RESERVATIONS
+        and data["confidence"] is Confidence.HIGH
+    ):
+        data["confidence"] = Confidence.MEDIUM
 
     return AnalysisResult.model_validate(data)
