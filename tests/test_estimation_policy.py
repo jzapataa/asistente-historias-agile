@@ -66,3 +66,18 @@ def test_estimate_range_requires_monotonic_hours() -> None:
             realistic_hours=8,
             pessimistic_hours=20,
         )
+
+
+def test_ready_with_reservations_cannot_keep_high_confidence(ready_draft) -> None:
+    draft = ready_draft.model_copy(
+        update={
+            "estimation_readiness": EstimationReadiness.READY_WITH_RESERVATIONS,
+            "confidence": Confidence.HIGH,
+            "assumptions": ["El volumen será moderado."],
+        }
+    )
+
+    result = apply_estimation_policy(draft)
+
+    assert result.estimation_readiness is EstimationReadiness.READY_WITH_RESERVATIONS
+    assert result.confidence is Confidence.MEDIUM
