@@ -70,7 +70,6 @@ class GeminiProvider:
                 contents=build_story_prompt(story),
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
-                    temperature=0.1,
                     response_mime_type="application/json",
                     response_schema=AnalysisDraft,
                 ),
