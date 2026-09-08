@@ -58,7 +58,18 @@ pytest -q
 python -m compileall app.py src tests
 ```
 
-Los tests no llaman al proveedor real; Gemini se sustituye por dobles de prueba.
+Los tests automáticos no consumen la API de Gemini: usan dobles de prueba y un smoke
+test real de Streamlit/SDK con una key ficticia que no realiza peticiones.
+
+La validación contra Gemini real es opcional y manual:
+
+```bash
+export GOOGLE_API_KEY="..."
+python scripts/live_core_validation.py
+```
+
+También existe el workflow `Core validation`, que instala las dependencias fijadas en un
+entorno Python 3.12 limpio, ejecuta `pip check`, compila las fuentes y lanza toda la suite.
 
 ## Privacidad
 
@@ -87,5 +98,5 @@ docs/
 
 ## Estado
 
-Esta rama cubre Baseline, Refactor mínimo y Core funcional. El rediseño visual, deploy e
-integraciones externas quedan fuera de esta iteración.
+Esta rama cubre Baseline, Refactor mínimo, Core funcional y su harness de validación.
+El rediseño visual, deploy e integraciones externas quedan fuera de esta iteración.
