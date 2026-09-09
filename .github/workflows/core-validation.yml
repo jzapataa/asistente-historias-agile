@@ -5,6 +5,11 @@ on:
     branches:
       - feature/v1-core
       - feature/v1-ux
+      - develop
+      - "fix/**"
+  pull_request:
+    branches:
+      - develop
   workflow_dispatch:
     inputs:
       run_live_gemini:

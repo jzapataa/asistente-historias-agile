@@ -4,13 +4,16 @@ from types import SimpleNamespace
 
 import pytest
 from google.genai import errors
+from pydantic import ValidationError
 
 from src.domain.analysis import AnalysisDraft
 from src.providers.gemini import (
     GeminiProvider,
     InvalidProviderResponseError,
     ProviderRateLimitError,
+    ProviderRequestError,
     ProviderUnavailableError,
+    build_analysis_response_schema,
 )
 
 
@@ -41,30 +44,36 @@ def build_provider(models: ModelsStub) -> GeminiProvider:
     )
 
 
-def test_provider_uses_structured_parsed_response(story, ready_draft: AnalysisDraft) -> None:
-    models = ModelsStub(response=SimpleNamespace(parsed=ready_draft, text=None))
+def test_provider_uses_json_schema_and_validates_response_text(
+    story, ready_draft: AnalysisDraft
+) -> None:
+    models = ModelsStub(response=SimpleNamespace(text=ready_draft.model_dump_json()))
     provider = build_provider(models)
 
     result = provider.analyze(story)
 
     assert result == ready_draft
     assert models.last_kwargs["model"] == "gemini-test"
-    assert models.last_kwargs["config"].response_mime_type == "application/json"
+    config = models.last_kwargs["config"]
+    assert config.response_mime_type == "application/json"
+    assert config.response_schema is None
+    assert config.response_json_schema == build_analysis_response_schema()
 
 
-def test_provider_accepts_valid_json_fallback(story, ready_draft: AnalysisDraft) -> None:
-    models = ModelsStub(
-        response=SimpleNamespace(parsed=None, text=ready_draft.model_dump_json())
-    )
-    provider = build_provider(models)
+def test_json_schema_strips_keywords_not_supported_by_gemini() -> None:
+    schema = build_analysis_response_schema()
+    serialized = str(schema)
 
-    result = provider.analyze(story)
-
-    assert result.summary == ready_draft.summary
+    assert "$defs" in schema
+    assert "anyOf" in serialized
+    assert "default" not in serialized
+    assert "exclusiveMinimum" not in serialized
+    assert "minLength" not in serialized
+    assert "maxLength" not in serialized
 
 
 def test_provider_rejects_invalid_response(story) -> None:
-    models = ModelsStub(response=SimpleNamespace(parsed=None, text='{"summary": "solo"}'))
+    models = ModelsStub(response=SimpleNamespace(text='{"summary": "solo"}'))
     provider = build_provider(models)
 
     with pytest.raises(InvalidProviderResponseError):
@@ -79,6 +88,18 @@ def test_provider_maps_rate_limit(story) -> None:
     provider = build_provider(ModelsStub(error=api_error))
 
     with pytest.raises(ProviderRateLimitError):
+        provider.analyze(story)
+
+
+def test_provider_maps_sdk_validation_error_as_request_error(story) -> None:
+    try:
+        AnalysisDraft.model_validate({})
+    except ValidationError as validation_error:
+        provider = build_provider(ModelsStub(error=validation_error))
+    else:  # pragma: no cover - defensive, the model requires fields
+        raise AssertionError("Expected AnalysisDraft validation to fail")
+
+    with pytest.raises(ProviderRequestError):
         provider.analyze(story)
 
 
