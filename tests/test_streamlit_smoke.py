@@ -14,8 +14,12 @@ def test_streamlit_app_starts_with_dummy_server_key(monkeypatch) -> None:
     app = AppTest.from_file(APP_PATH, default_timeout=10).run()
 
     assert not app.exception
-    assert app.title[0].value == "🧠 Jira Story Analyzer"
-    assert app.button[0].label == "Analizar historia"
+    labels = [button.label for button in app.button]
+    assert "Usar ejemplo" in labels
+    assert "Limpiar" in labels
+    assert "Analizar historia" in labels
+    assert app.text_area(key="story_description")
+    assert app.selectbox(key="story_task_type").value == "No lo sé"
 
 
 def test_streamlit_app_handles_missing_key_without_uncaught_exception(monkeypatch) -> None:
