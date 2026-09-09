@@ -1,0 +1,68 @@
+name: Core validation
+
+on:
+  push:
+    branches:
+      - feature/v1-core
+      - feature/v1-ux
+      - develop
+      - "fix/**"
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+    inputs:
+      run_live_gemini:
+        description: "Run the optional live Gemini evaluation (requires GOOGLE_API_KEY secret)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Verify dependency graph
+        run: python -m pip check
+
+      - name: Compile Python sources
+        run: python -m compileall -q app.py src tests scripts
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Print validated runtime versions
+        run: |
+          python - <<'PY'
+          import pydantic
+          import streamlit
+          import google.genai
+          print("pydantic", pydantic.__version__)
+          print("streamlit", streamlit.__version__)
+          print("google.genai import OK")
+          PY
+
+      - name: Live Gemini core evaluation
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live_gemini }}
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          if [ -z "$GOOGLE_API_KEY" ]; then
+            echo "GOOGLE_API_KEY repository secret is required for live validation."
+            exit 1
+          fi
+          python scripts/live_core_validation.py
