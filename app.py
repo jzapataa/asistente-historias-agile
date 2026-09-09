@@ -56,7 +56,6 @@ FORM_DEFAULTS = {
 }
 
 
-@st.cache_resource
 def build_service(api_key: str, model_name: str, timeout_seconds: int) -> AnalysisService:
     return AnalysisService(
         GeminiProvider(api_key=api_key, model_name=model_name, timeout_seconds=timeout_seconds)
