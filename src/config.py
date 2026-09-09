@@ -7,7 +7,7 @@ import os
 from typing import Mapping, Any
 
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_TIMEOUT_SECONDS = 90
 
 
