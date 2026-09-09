@@ -87,7 +87,7 @@ orquestación para esta V1.
 - Python 3.12
 - Streamlit 1.63.0
 - Google Gen AI SDK (`google-genai` 2.22.0)
-- Gemini (`gemini-2.5-flash` por defecto)
+- Gemini (`gemini-2.5-flash-lite` por defecto)
 - Pydantic 2.13.5
 - pytest 9.1.1
 
@@ -105,14 +105,14 @@ Se admite, por orden de prioridad:
 Modelo y timeout son configurables mediante:
 
 ```bash
-GEMINI_MODEL="gemini-2.5-flash"
+GEMINI_MODEL="gemini-2.5-flash-lite"
 GEMINI_TIMEOUT_SECONDS="90"
 ```
 
-Si no se especifican, la configuración oficial de la V1 es:
+Si no se especifican, la configuración oficial de la V1.0.1 es:
 
 ```text
-model   = gemini-2.5-flash
+model   = gemini-2.5-flash-lite
 timeout = 90 seconds
 ```
 
@@ -164,7 +164,9 @@ La validación semántica contra Gemini real puede ejecutarse manualmente con:
 python scripts/live_core_validation.py
 ```
 
-La combinación validada para la V1 es `gemini-2.5-flash` con timeout de 90 segundos.
+La combinación validada para la V1.0.1 es `gemini-2.5-flash-lite` con timeout de 90 segundos.
+Este modelo mostró mejor disponibilidad en producción que `gemini-2.5-flash`, que devolvió
+HTTP 503 de forma repetida durante las pruebas reales.
 
 ## Privacidad y límites
 
