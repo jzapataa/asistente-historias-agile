@@ -44,6 +44,32 @@ def test_missing_estimate_forces_not_ready(ready_draft: AnalysisDraft) -> None:
     assert result.estimate is None
 
 
+def test_low_confidence_ready_forces_not_ready(ready_draft: AnalysisDraft) -> None:
+    unsafe = ready_draft.model_copy(update={"confidence": Confidence.LOW})
+
+    result = apply_estimation_policy(unsafe)
+
+    assert result.estimation_readiness is EstimationReadiness.NOT_READY
+    assert result.estimate is None
+    assert result.confidence is Confidence.LOW
+
+
+def test_low_confidence_reservations_force_not_ready(ready_draft: AnalysisDraft) -> None:
+    unsafe = ready_draft.model_copy(
+        update={
+            "estimation_readiness": EstimationReadiness.READY_WITH_RESERVATIONS,
+            "confidence": Confidence.LOW,
+            "assumptions": ["El volumen será moderado."],
+        }
+    )
+
+    result = apply_estimation_policy(unsafe)
+
+    assert result.estimation_readiness is EstimationReadiness.NOT_READY
+    assert result.estimate is None
+    assert result.confidence is Confidence.LOW
+
+
 def test_assumptions_downgrade_ready_to_reservations(ready_draft: AnalysisDraft) -> None:
     draft = ready_draft.model_copy(
         update={
