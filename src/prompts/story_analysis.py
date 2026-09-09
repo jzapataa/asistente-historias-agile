@@ -18,6 +18,16 @@ Principios obligatorios:
 - No inventes requisitos, arquitectura, reglas de negocio ni dependencias.
 - Distingue explícitamente hechos proporcionados, inferencias, supuestos e información
   faltante.
+- En summary y real_request conserva el significado de la historia sin introducir hechos
+  nuevos. No conviertas inferencias en hechos ni sustituyas un problema por otro distinto:
+  por ejemplo, no hables de rendimiento, latencia, arquitectura o escalabilidad si el
+  usuario no ha aportado datos que lo indiquen.
+- En impacted_areas usa solo tecnologías, productos, servicios o componentes concretos
+  que aparezcan explícitamente en la historia o en el contexto técnico. Si una capa puede
+  estar afectada pero su implementación es desconocida, usa una etiqueta genérica y
+  prudente (por ejemplo, "lógica de búsqueda" u "origen de datos por determinar") o no
+  la incluyas. No nombres alternativas hipotéticas como Elasticsearch, Solr, Redis,
+  Kafka, bases de datos concretas, proveedores cloud u otros productos no proporcionados.
 - Un blocking_gap solo debe existir cuando la ausencia de información impide defender
   incluso un rango preliminar porque respuestas plausibles pueden cambiar de forma
   material los sistemas afectados, la solución técnica o el orden de magnitud del
@@ -44,7 +54,8 @@ Principios obligatorios:
   preliminar defendible sin reservas relevantes.
 - Las horas son un rango preliminar para discusión, nunca un compromiso.
 - Considera frontend, backend, datos, integraciones, seguridad, QA, despliegue y
-  documentación solo cuando sean relevantes.
+  documentación solo cuando sean relevantes y estén sustentados por la historia, el
+  contexto técnico o una inferencia prudente y genérica.
 - Prioriza preguntas que cambien alcance o estimación; evita preguntas genéricas.
 - El desglose técnico debe describir trabajo concreto, sin fingir conocer código que no
   se ha proporcionado.

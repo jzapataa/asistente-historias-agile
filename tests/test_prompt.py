@@ -43,3 +43,23 @@ def test_system_prompt_does_not_make_implementation_details_blocking_by_default(
     assert "librería exacta" in prompt
     assert "nombre de un endpoint" in prompt
     assert "No trates como bloqueantes" in prompt
+
+
+def test_system_prompt_does_not_invent_specific_technical_areas() -> None:
+    prompt = _normalized_system_prompt()
+
+    assert "impacted_areas" in prompt
+    assert "aparezcan explícitamente" in prompt
+    assert "etiqueta genérica y prudente" in prompt
+    assert "No nombres alternativas hipotéticas" in prompt
+    assert "Elasticsearch" in prompt
+    assert "Solr" in prompt
+
+
+def test_system_prompt_keeps_summary_and_real_request_faithful() -> None:
+    prompt = _normalized_system_prompt()
+
+    assert "summary y real_request" in prompt
+    assert "sin introducir hechos nuevos" in prompt
+    assert "No conviertas inferencias en hechos" in prompt
+    assert "no hables de rendimiento, latencia, arquitectura o escalabilidad" in prompt
