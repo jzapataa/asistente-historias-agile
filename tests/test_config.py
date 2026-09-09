@@ -36,9 +36,9 @@ def test_settings_uses_v1_gemini_defaults(monkeypatch) -> None:
 
     settings = Settings.from_sources({})
 
-    assert DEFAULT_MODEL == "gemini-2.5-flash"
+    assert DEFAULT_MODEL == "gemini-2.5-flash-lite"
     assert DEFAULT_TIMEOUT_SECONDS == 90
-    assert settings.model_name == "gemini-2.5-flash"
+    assert settings.model_name == "gemini-2.5-flash-lite"
     assert settings.request_timeout_seconds == 90
 
 
