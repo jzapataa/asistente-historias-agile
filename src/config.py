@@ -7,8 +7,8 @@ import os
 from typing import Mapping, Any
 
 
-DEFAULT_MODEL = "gemini-3.5-flash"
-DEFAULT_TIMEOUT_SECONDS = 45
+DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_TIMEOUT_SECONDS = 90
 
 
 class ConfigurationError(RuntimeError):
