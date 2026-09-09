@@ -16,6 +16,34 @@ from src.prompts.story_analysis import SYSTEM_PROMPT, build_story_prompt
 logger = logging.getLogger(__name__)
 
 
+_SUPPORTED_JSON_SCHEMA_KEYS = frozenset(
+    {
+        "$id",
+        "$defs",
+        "$ref",
+        "$anchor",
+        "type",
+        "format",
+        "title",
+        "description",
+        "enum",
+        "items",
+        "prefixItems",
+        "minItems",
+        "maxItems",
+        "minimum",
+        "maximum",
+        "anyOf",
+        "oneOf",
+        "properties",
+        "additionalProperties",
+        "required",
+        "propertyOrdering",
+    }
+)
+_SCHEMA_MAP_KEYS = frozenset({"$defs", "properties"})
+
+
 class ProviderError(RuntimeError):
     user_message = "No se ha podido generar el análisis en este momento."
 
@@ -48,6 +76,36 @@ class InvalidProviderResponseError(ProviderError):
     )
 
 
+def _sanitize_json_schema(value: Any, *, parent_key: str | None = None) -> Any:
+    """Keep only JSON Schema keywords supported by Gemini structured output.
+
+    Pydantic emits useful validation metadata such as ``default``, ``minLength`` and
+    ``exclusiveMinimum``. The domain model still enforces those constraints after the
+    response, but Gemini's JSON-schema endpoint supports a smaller keyword subset.
+    """
+
+    if isinstance(value, dict):
+        if parent_key in _SCHEMA_MAP_KEYS:
+            return {
+                name: _sanitize_json_schema(schema)
+                for name, schema in value.items()
+            }
+        return {
+            key: _sanitize_json_schema(item, parent_key=key)
+            for key, item in value.items()
+            if key in _SUPPORTED_JSON_SCHEMA_KEYS
+        }
+    if isinstance(value, list):
+        return [_sanitize_json_schema(item) for item in value]
+    return value
+
+
+def build_analysis_response_schema() -> dict[str, Any]:
+    """Return a Gemini-compatible JSON Schema for the provider-facing draft."""
+
+    return _sanitize_json_schema(AnalysisDraft.model_json_schema())
+
+
 class GeminiProvider:
     def __init__(
         self,
@@ -71,7 +129,7 @@ class GeminiProvider:
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
                     response_mime_type="application/json",
-                    response_schema=AnalysisDraft,
+                    response_json_schema=build_analysis_response_schema(),
                 ),
             )
         except errors.ClientError as exc:
@@ -84,6 +142,9 @@ class GeminiProvider:
         except errors.ServerError as exc:
             logger.warning("Gemini server error status=%s", exc.code)
             raise ProviderUnavailableError() from None
+        except ValidationError as exc:
+            logger.warning("Gemini request validation failed type=%s", type(exc).__name__)
+            raise ProviderRequestError() from None
         except Exception as exc:
             error_type = type(exc).__name__
             logger.warning("Gemini transport error type=%s", error_type)
@@ -92,9 +153,6 @@ class GeminiProvider:
             raise ProviderUnavailableError() from None
 
         try:
-            if isinstance(getattr(response, "parsed", None), AnalysisDraft):
-                return response.parsed
-
             response_text = getattr(response, "text", None)
             if not response_text:
                 raise InvalidProviderResponseError()
