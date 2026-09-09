@@ -10,8 +10,10 @@ from src.domain.analysis import AnalysisDraft
 from src.providers.gemini import (
     GeminiProvider,
     InvalidProviderResponseError,
+    ProviderAuthenticationError,
     ProviderRateLimitError,
     ProviderRequestError,
+    ProviderTimeoutError,
     ProviderUnavailableError,
     build_analysis_response_schema,
 )
@@ -80,6 +82,24 @@ def test_provider_rejects_invalid_response(story) -> None:
         provider.analyze(story)
 
 
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_provider_maps_authentication_errors(story, status_code: int) -> None:
+    api_error = errors.ClientError(
+        status_code,
+        {
+            "error": {
+                "code": status_code,
+                "message": "auth failed",
+                "status": "PERMISSION_DENIED",
+            }
+        },
+    )
+    provider = build_provider(ModelsStub(error=api_error))
+
+    with pytest.raises(ProviderAuthenticationError):
+        provider.analyze(story)
+
+
 def test_provider_maps_rate_limit(story) -> None:
     api_error = errors.ClientError(
         429,
@@ -88,6 +108,42 @@ def test_provider_maps_rate_limit(story) -> None:
     provider = build_provider(ModelsStub(error=api_error))
 
     with pytest.raises(ProviderRateLimitError):
+        provider.analyze(story)
+
+
+def test_provider_maps_other_client_error_as_request_error(story) -> None:
+    api_error = errors.ClientError(
+        400,
+        {"error": {"code": 400, "message": "bad request", "status": "INVALID_ARGUMENT"}},
+    )
+    provider = build_provider(ModelsStub(error=api_error))
+
+    with pytest.raises(ProviderRequestError):
+        provider.analyze(story)
+
+
+@pytest.mark.parametrize("status_code", [500, 503])
+def test_provider_maps_server_errors_as_unavailable(story, status_code: int) -> None:
+    api_error = errors.ServerError(
+        status_code,
+        {
+            "error": {
+                "code": status_code,
+                "message": "provider unavailable",
+                "status": "UNAVAILABLE",
+            }
+        },
+    )
+    provider = build_provider(ModelsStub(error=api_error))
+
+    with pytest.raises(ProviderUnavailableError):
+        provider.analyze(story)
+
+
+def test_provider_maps_timeout_transport_error(story) -> None:
+    provider = build_provider(ModelsStub(error=TimeoutError("request timed out")))
+
+    with pytest.raises(ProviderTimeoutError):
         provider.analyze(story)
 
 
