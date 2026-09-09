@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from src.domain.analysis import (
     AnalysisDraft,
+    AnalysisResult,
     Confidence,
     EstimateRange,
     EstimationReadiness,
@@ -33,6 +34,7 @@ def test_blocking_gap_forces_not_ready(ready_draft: AnalysisDraft) -> None:
 
     assert result.estimation_readiness is EstimationReadiness.NOT_READY
     assert result.estimate is None
+    assert result.confidence is Confidence.LOW
 
 
 def test_missing_estimate_forces_not_ready(ready_draft: AnalysisDraft) -> None:
@@ -42,20 +44,23 @@ def test_missing_estimate_forces_not_ready(ready_draft: AnalysisDraft) -> None:
 
     assert result.estimation_readiness is EstimationReadiness.NOT_READY
     assert result.estimate is None
-
-
-def test_low_confidence_ready_forces_not_ready(ready_draft: AnalysisDraft) -> None:
-    unsafe = ready_draft.model_copy(update={"confidence": Confidence.LOW})
-
-    result = apply_estimation_policy(unsafe)
-
-    assert result.estimation_readiness is EstimationReadiness.NOT_READY
-    assert result.estimate is None
     assert result.confidence is Confidence.LOW
 
 
-def test_low_confidence_reservations_force_not_ready(ready_draft: AnalysisDraft) -> None:
-    unsafe = ready_draft.model_copy(
+def test_low_confidence_ready_becomes_reservations(ready_draft: AnalysisDraft) -> None:
+    draft = ready_draft.model_copy(update={"confidence": Confidence.LOW})
+
+    result = apply_estimation_policy(draft)
+
+    assert result.estimation_readiness is EstimationReadiness.READY_WITH_RESERVATIONS
+    assert result.estimate is not None
+    assert result.confidence is Confidence.MEDIUM
+
+
+def test_low_confidence_reservations_are_normalized_to_medium(
+    ready_draft: AnalysisDraft,
+) -> None:
+    draft = ready_draft.model_copy(
         update={
             "estimation_readiness": EstimationReadiness.READY_WITH_RESERVATIONS,
             "confidence": Confidence.LOW,
@@ -63,11 +68,11 @@ def test_low_confidence_reservations_force_not_ready(ready_draft: AnalysisDraft)
         }
     )
 
-    result = apply_estimation_policy(unsafe)
+    result = apply_estimation_policy(draft)
 
-    assert result.estimation_readiness is EstimationReadiness.NOT_READY
-    assert result.estimate is None
-    assert result.confidence is Confidence.LOW
+    assert result.estimation_readiness is EstimationReadiness.READY_WITH_RESERVATIONS
+    assert result.estimate is not None
+    assert result.confidence is Confidence.MEDIUM
 
 
 def test_assumptions_downgrade_ready_to_reservations(ready_draft: AnalysisDraft) -> None:
@@ -94,7 +99,9 @@ def test_estimate_range_requires_monotonic_hours() -> None:
         )
 
 
-def test_ready_with_reservations_cannot_keep_high_confidence(ready_draft) -> None:
+def test_ready_with_reservations_cannot_keep_high_confidence(
+    ready_draft: AnalysisDraft,
+) -> None:
     draft = ready_draft.model_copy(
         update={
             "estimation_readiness": EstimationReadiness.READY_WITH_RESERVATIONS,
@@ -107,3 +114,25 @@ def test_ready_with_reservations_cannot_keep_high_confidence(ready_draft) -> Non
 
     assert result.estimation_readiness is EstimationReadiness.READY_WITH_RESERVATIONS
     assert result.confidence is Confidence.MEDIUM
+
+
+def test_final_result_rejects_reservations_with_low_confidence(
+    ready_draft: AnalysisDraft,
+) -> None:
+    data = ready_draft.model_dump()
+    data["estimation_readiness"] = EstimationReadiness.READY_WITH_RESERVATIONS
+    data["confidence"] = Confidence.LOW
+
+    with pytest.raises(ValidationError):
+        AnalysisResult.model_validate(data)
+
+
+def test_final_result_rejects_ready_with_low_confidence(
+    ready_draft: AnalysisDraft,
+) -> None:
+    data = ready_draft.model_dump()
+    data["estimation_readiness"] = EstimationReadiness.READY
+    data["confidence"] = Confidence.LOW
+
+    with pytest.raises(ValidationError):
+        AnalysisResult.model_validate(data)
