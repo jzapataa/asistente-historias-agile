@@ -1,0 +1,1 @@
+The Streamlit analysis service is intentionally not cached. A fresh service/provider is built on each rerun so hot-deploys cannot retain stale provider or exception class instances.
