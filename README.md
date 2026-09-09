@@ -39,7 +39,7 @@ La política final se aplica en código después de la respuesta del modelo, por
 - Python 3.12
 - Streamlit 1.63
 - Google Gen AI SDK (`google-genai`)
-- Gemini (modelo configurable, `gemini-3.5-flash` por defecto)
+- Gemini (modelo configurable, `gemini-2.5-flash` por defecto)
 - Pydantic
 - pytest
 
@@ -62,8 +62,8 @@ de `.streamlit/secrets.toml`.
 Configuración opcional:
 
 ```bash
-export GEMINI_MODEL="gemini-3.5-flash"
-export GEMINI_TIMEOUT_SECONDS="45"
+export GEMINI_MODEL="gemini-2.5-flash"
+export GEMINI_TIMEOUT_SECONDS="90"
 ```
 
 ## Tests
