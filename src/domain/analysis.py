@@ -110,8 +110,19 @@ class AnalysisResult(AnalysisDraft):
                 raise ValueError("NOT_READY no puede incluir una estimación de horas.")
             if self.confidence is not Confidence.LOW:
                 raise ValueError("NOT_READY debe tener confianza LOW.")
-        elif self.estimate is None:
+            return self
+
+        if self.estimate is None:
             raise ValueError(
                 "READY y READY_WITH_RESERVATIONS requieren un rango de estimación."
             )
+
+        if self.estimation_readiness is EstimationReadiness.READY_WITH_RESERVATIONS:
+            if self.confidence is not Confidence.MEDIUM:
+                raise ValueError(
+                    "READY_WITH_RESERVATIONS debe tener confianza MEDIUM."
+                )
+        elif self.confidence is Confidence.LOW:
+            raise ValueError("READY no puede tener confianza LOW.")
+
         return self
