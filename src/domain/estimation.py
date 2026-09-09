@@ -11,17 +11,17 @@ from src.domain.analysis import (
 
 
 def apply_estimation_policy(draft: AnalysisDraft) -> AnalysisResult:
-    """Enforce safety rules independently from the model's requested output.
+    """Enforce estimation safety independently from the model's raw output.
 
     Rules:
     - Any blocking gap forces NOT_READY and removes hours.
     - A model-declared NOT_READY always removes hours.
-    - Missing estimate data cannot be promoted to a ready state.
-    - LOW confidence is not sufficient to defend an estimate and therefore forces
-      NOT_READY with no hours.
-    - Non-blocking assumptions or missing information downgrade READY to
-      READY_WITH_RESERVATIONS.
-    - READY_WITH_RESERVATIONS cannot keep HIGH confidence; it is normalized to MEDIUM.
+    - Missing estimate data cannot be promoted to an estimable state.
+    - Non-blocking assumptions, missing information, or LOW confidence downgrade
+      READY to READY_WITH_RESERVATIONS instead of suppressing an otherwise valid range.
+    - READY_WITH_RESERVATIONS is always normalized to MEDIUM confidence.
+    - READY can only survive with HIGH or MEDIUM confidence and no non-blocking
+      uncertainty that requires reservations.
     """
 
     data = draft.model_dump()
@@ -30,7 +30,6 @@ def apply_estimation_policy(draft: AnalysisDraft) -> AnalysisResult:
         draft.blocking_gaps
         or draft.estimation_readiness is EstimationReadiness.NOT_READY
         or draft.estimate is None
-        or draft.confidence is Confidence.LOW
     ):
         data["estimation_readiness"] = EstimationReadiness.NOT_READY
         data["estimate"] = None
@@ -38,14 +37,13 @@ def apply_estimation_policy(draft: AnalysisDraft) -> AnalysisResult:
         return AnalysisResult.model_validate(data)
 
     if draft.estimation_readiness is EstimationReadiness.READY and (
-        draft.assumptions or draft.missing_information
+        draft.assumptions
+        or draft.missing_information
+        or draft.confidence is Confidence.LOW
     ):
         data["estimation_readiness"] = EstimationReadiness.READY_WITH_RESERVATIONS
 
-    if (
-        data["estimation_readiness"] is EstimationReadiness.READY_WITH_RESERVATIONS
-        and data["confidence"] is Confidence.HIGH
-    ):
+    if data["estimation_readiness"] is EstimationReadiness.READY_WITH_RESERVATIONS:
         data["confidence"] = Confidence.MEDIUM
 
     return AnalysisResult.model_validate(data)
