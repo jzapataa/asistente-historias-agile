@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/v1-core
+      - feature/v1-ux
   workflow_dispatch:
     inputs:
       run_live_gemini:
