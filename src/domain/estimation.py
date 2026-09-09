@@ -17,9 +17,11 @@ def apply_estimation_policy(draft: AnalysisDraft) -> AnalysisResult:
     - Any blocking gap forces NOT_READY and removes hours.
     - A model-declared NOT_READY always removes hours.
     - Missing estimate data cannot be promoted to a ready state.
+    - LOW confidence is not sufficient to defend an estimate and therefore forces
+      NOT_READY with no hours.
     - Non-blocking assumptions or missing information downgrade READY to
       READY_WITH_RESERVATIONS.
-    - READY_WITH_RESERVATIONS cannot keep HIGH confidence.
+    - READY_WITH_RESERVATIONS cannot keep HIGH confidence; it is normalized to MEDIUM.
     """
 
     data = draft.model_dump()
@@ -28,6 +30,7 @@ def apply_estimation_policy(draft: AnalysisDraft) -> AnalysisResult:
         draft.blocking_gaps
         or draft.estimation_readiness is EstimationReadiness.NOT_READY
         or draft.estimate is None
+        or draft.confidence is Confidence.LOW
     ):
         data["estimation_readiness"] = EstimationReadiness.NOT_READY
         data["estimate"] = None
